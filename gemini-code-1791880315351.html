@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>調酒配方小幫手</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --card-bg: #334155;
+            --card-hover: #475569;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-color: #d97706; /* 琥珀金 */
+            --accent-hover: #f59e0b;
+            --border-color: #475569;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        header h1 {
+            color: var(--accent-color);
+            font-size: 1.8rem;
+            margin-bottom: 6px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .main-layout {
+                grid-template-columns: 1fr 1fr;
+                align-items: start;
+            }
+            .details-panel {
+                position: sticky;
+                top: 20px;
+            }
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            color: var(--accent-color);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 篩選條件 */
+        .filter-group { margin-bottom: 14px; }
+        .filter-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .tag-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .btn-tag {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-tag:hover { background-color: var(--card-hover); }
+
+        .btn-tag.active {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .btn-clear {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px dashed var(--border-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 6px;
+        }
+
+        .btn-clear:hover {
+            color: var(--text-main);
+            border-color: var(--text-main);
+        }
+
+        /* 配方列表 */
+        .result-count { font-size: 0.9rem; color: var(--text-muted); }
+        .recipe-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .recipe-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .recipe-card:hover { border-color: var(--accent-color); }
+
+        .recipe-card.active {
+            border-color: var(--accent-color);
+            background-color: #3b4c63;
+            box-shadow: 0 0 0 1px var(--accent-color);
+        }
+
+        .recipe-card-title {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 4px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .badge-base {
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .badge-flavor {
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .no-result {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* 詳情區 */
+        .details-title {
+            font-size: 1.3rem;
+            color: var(--accent-color);
+            margin-bottom: 8px;
+        }
+
+        .method-text {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 8px 12px;
+            border-radius: 4px;
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .servings-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            background-color: var(--card-bg);
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .servings-btn {
+            background-color: var(--panel-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+
+        .servings-input {
+            width: 50px;
+            text-align: center;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 4px;
+        }
+
+        .servings-tip {
+            font-size: 0.8rem;
+            color: var(--accent-color);
+            display: none;
+        }
+
+        .ingredients-list {
+            list-style: none;
+        }
+
+        .ingredient-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.95rem;
+        }
+
+        .empty-selection {
+            text-align: center;
+            padding: 40px 10px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>調酒配方小幫手 🍸</h1>
+        <p>選擇基酒或口味探索 20 款經典配方，輸入杯數自動換算備料用量</p>
+    </header>
+
+    <div class="main-layout">
+        <!-- 左側：篩選區與列表 -->
+        <div>
+            <div class="panel" style="margin-bottom: 20px;">
+                <div class="section-title">篩選條件</div>
+                
+                <div class="filter-group">
+                    <span class="filter-label">基酒（單選）</span>
+                    <div class="tag-group" id="base-tags">
+                        <button class="btn-tag" data-base="琴酒">琴酒</button>
+                        <button class="btn-tag" data-base="伏特加">伏特加</button>
+                        <button class="btn-tag" data-base="白蘭姆">白蘭姆</button>
+                        <button class="btn-tag" data-base="龍舌蘭">龍舌蘭</button>
+                        <button class="btn-tag" data-base="威士忌">威士忌</button>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <span class="filter-label">口味（可複選）</span>
+                    <div class="tag-group" id="flavor-tags">
+                        <button class="btn-tag" data-flavor="酸">酸</button>
+                        <button class="btn-tag" data-flavor="甜">甜</button>
+                        <button class="btn-tag" data-flavor="苦">苦</button>
+                        <button class="btn-tag" data-flavor="果香">果香</button>
+                        <button class="btn-tag" data-flavor="清爽">清爽</button>
+                        <button class="btn-tag" data-flavor="濃烈">濃烈</button>
+                    </div>
+                </div>
+
+                <button class="btn-clear" id="btn-clear">清除條件</button>
+            </div>
+
+            <div class="panel">
+                <div class="section-title">
+                    <span>配方列表</span>
+                    <span class="result-count" id="result-count">找到 0 款</span>
+                </div>
+                <div class="recipe-list" id="recipe-list"></div>
+            </div>
+        </div>
+
+        <!-- 右側：詳情區 -->
+        <div class="panel details-panel">
+            <div class="empty-selection" id="empty-details">
+                請點選左側調酒卡片檢視配方詳情與份數換算
+            </div>
+            <div id="active-details" style="display: none;">
+                <h2 class="details-title" id="detail-name"></h2>
+                <div class="method-text" id="detail-method"></div>
+
+                <div class="servings-box">
+                    <label>製作杯數：</label>
+                    <button class="servings-btn" id="btn-minus">-</button>
+                    <input type="number" id="servings-input" class="servings-input" value="1" min="1" max="50">
+                    <button class="servings-btn" id="btn-plus">+</button>
+                    <span class="servings-tip" id="servings-tip">提示：請輸入 1 至 50 正整數</span>
+                </div>
+
+                <ul class="ingredients-list" id="ingredients-list"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 20 款內建配方資料庫 ---
+    const recipes = [
+        {
+            id: "mojito", name: "Mojito 莫希托", base: "白蘭姆", flavors: ["清爽", "酸"],
+            method: "薄荷輕壓後加入其他材料，用蘇打水補滿",
+            ingredients: [{ name: "白蘭姆", amount: 45, unit: "ml" }, { name: "萊姆汁", amount: 25, unit: "ml" }, { name: "糖漿", amount: 15, unit: "ml" }, { name: "薄荷葉", amount: 8, unit: "片" }, { name: "蘇打水", amount: 60, unit: "ml" }]
+        },
+        {
+            id: "daiquiri", name: "Daiquiri 黛綺莉", base: "白蘭姆", flavors: ["酸", "清爽"],
+            method: "加冰搖勻後倒入冰鎮淺碟杯",
+            ingredients: [{ name: "白蘭姆", amount: 60, unit: "ml" }, { name: "萊姆汁", amount: 25, unit: "ml" }, { name: "糖漿", amount: 15, unit: "ml" }]
+        },
+        {
+            id: "pina_colada", name: "Piña Colada 椰林風情", base: "白蘭姆", flavors: ["甜", "果香"],
+            method: "材料與碎冰一同用果汁機打勻後倒入高杯",
+            ingredients: [{ name: "白蘭姆", amount: 50, unit: "ml" }, { name: "椰奶", amount: 30, unit: "ml" }, { name: "鳳梨汁", amount: 50, unit: "ml" }]
+        },
+        {
+            id: "cuba_libre", name: "Cuba Libre 自由古巴", base: "白蘭姆", flavors: ["甜", "清爽"],
+            method: "杯中加冰倒入白蘭姆與萊姆汁，可樂補滿",
+            ingredients: [{ name: "白蘭姆", amount: 50, unit: "ml" }, { name: "萊姆汁", amount: 10, unit: "ml" }, { name: "可樂", amount: 120, unit: "ml" }]
+        },
+        {
+            id: "margarita", name: "Margarita 瑪格麗特", base: "龍舌蘭", flavors: ["酸", "果香"],
+            method: "杯口抹鹽邊，材料加冰搖勻後倒入杯中",
+            ingredients: [{ name: "龍舌蘭", amount: 50, unit: "ml" }, { name: "橙皮酒", amount: 25, unit: "ml" }, { name: "萊姆汁", amount: 25, unit: "ml" }]
+        },
+        {
+            id: "paloma", name: "Paloma 帕洛瑪", base: "龍舌蘭", flavors: ["果香", "清爽"],
+            method: "杯中加冰倒入材料，最後用葡萄柚汽水或蘇打水補滿",
+            ingredients: [{ name: "龍舌蘭", amount: 50, unit: "ml" }, { name: "葡萄柚汁", amount: 60, unit: "ml" }, { name: "萊姆汁", amount: 10, unit: "ml" }, { name: "蘇打水", amount: 30, unit: "ml" }]
+        },
+        {
+            id: "tequila_sunrise", name: "Tequila Sunrise 龍舌蘭日出", base: "龍舌蘭", flavors: ["甜", "果香"],
+            method: "龍舌蘭與柳橙汁加冰混勻，最後沿杯壁注入紅石榴糖漿沈底",
+            ingredients: [{ name: "龍舌蘭", amount: 45, unit: "ml" }, { name: "柳橙汁", amount: 90, unit: "ml" }, { name: "紅石榴糖漿", amount: 15, unit: "ml" }]
+        },
+        {
+            id: "tequila_sour", name: "Tequila Sour 龍舌蘭酸酒", base: "龍舌蘭", flavors: ["酸", "甜"],
+            method: "加冰搖勻後過濾倒入岩石杯",
+            ingredients: [{ name: "龍舌蘭", amount: 50, unit: "ml" }, { name: "檸檬汁", amount: 25, unit: "ml" }, { name: "糖漿", amount: 15, unit: "ml" }]
+        },
+        {
+            id: "old_fashioned", name: "Old Fashioned 古典雞尾酒", base: "威士忌", flavors: ["濃烈", "苦"],
+            method: "杯中加入糖漿、苦精與大冰塊，倒入波本威士忌攪拌",
+            ingredients: [{ name: "波本威士忌", amount: 60, unit: "ml" }, { name: "糖漿", amount: 5, unit: "ml" }, { name: "安格仕苦精", amount: 2, unit: "ml" }]
+        },
+        {
+            id: "whiskey_sour", name: "Whiskey Sour 威士忌酸酒", base: "威士忌", flavors: ["酸", "甜"],
+            method: "加冰用力搖勻後倒入裝有冰塊的杯中",
+            ingredients: [{ name: "波本威士忌", amount: 50, unit: "ml" }, { name: "檸檬汁", amount: 25, unit: "ml" }, { name: "糖漿", amount: 15, unit: "ml" }]
+        },
+        {
+            id: "manhattan", name: "Manhattan 曼哈頓", base: "威士忌", flavors: ["濃烈", "甜"],
+            method: "混合材料加冰攪拌冷卻，過濾倒入雞尾酒杯",
+            ingredients: [{ name: "裸麥威士忌", amount: 50, unit: "ml" }, { name: "甜味美思", amount: 20, unit: "ml" }, { name: "安格仕苦精", amount: 2, unit: "ml" }]
+        },
+        {
+            id: "mint_julep", name: "Mint Julep 薄荷朱利普", base: "威士忌", flavors: ["清爽", "甜"],
+            method: "輕壓薄荷葉與糖漿，加入波本威士忌與大量碎冰混勻",
+            ingredients: [{ name: "波本威士忌", amount: 60, unit: "ml" }, { name: "糖漿", amount: 10, unit: "ml" }, { name: "薄荷葉", amount: 8, unit: "片" }]
+        },
+        {
+            id: "gin_tonic", name: "Gin & Tonic 琴通寧", base: "琴酒", flavors: ["清爽", "苦"],
+            method: "杯中加冰，倒入琴酒後用通寧水補滿",
+            ingredients: [{ name: "琴酒", amount: 45, unit: "ml" }, { name: "通寧水", amount: 120, unit: "ml" }]
+        },
+        {
+            id: "negroni", name: "Negroni 內格羅尼", base: "琴酒", flavors: ["苦", "濃烈"],
+            method: "三種材料等比例加冰攪拌均勻",
+            ingredients: [{ name: "琴酒", amount: 30, unit: "ml" }, { name: "金巴利", amount: 30, unit: "ml" }, { name: "甜味美思", amount: 30, unit: "ml" }]
+        },
+        {
+            id: "tom_collins", name: "Tom Collins 湯姆可林斯", base: "琴酒", flavors: ["清爽", "酸"],
+            method: "琴酒、檸檬汁與糖漿搖勻，倒入高杯並補滿蘇打水",
+            ingredients: [{ name: "琴酒", amount: 45, unit: "ml" }, { name: "檸檬汁", amount: 25, unit: "ml" }, { name: "糖漿", amount: 15, unit: "ml" }, { name: "蘇打水", amount: 60, unit: "ml" }]
+        },
+        {
+            id: "gimlet", name: "Gimlet 琴蕾", base: "琴酒", flavors: ["酸", "清爽"],
+            method: "琴酒與萊姆汁加冰搖勻過濾倒入馬丁尼杯",
+            ingredients: [{ name: "琴酒", amount: 50, unit: "ml" }, { name: "萊姆汁", amount: 20, unit: "ml" }, { name: "糖漿", amount: 10, unit: "ml" }]
+        },
+        {
+            id: "moscow_mule", name: "Moscow Mule 莫斯科騾子", base: "伏特加", flavors: ["清爽", "酸"],
+            method: "杯中加冰，依序倒入伏特加、萊姆汁與薑汁啤酒",
+            ingredients: [{ name: "伏特加", amount: 45, unit: "ml" }, { name: "萊姆汁", amount: 15, unit: "ml" }, { name: "薑汁啤酒", amount: 120, unit: "ml" }]
+        },
+        {
+            id: "cosmopolitan", name: "Cosmopolitan 柯夢波丹", base: "伏特加", flavors: ["酸", "果香"],
+            method: "材料加冰快速搖勻，倒入馬丁尼杯",
+            ingredients: [{ name: "伏特加", amount: 40, unit: "ml" }, { name: "橙皮酒", amount: 15, unit: "ml" }, { name: "蔓越莓汁", amount: 30, unit: "ml" }, { name: "萊姆汁", amount: 15, unit: "ml" }]
+        },
+        {
+            id: "screwdriver", name: "Screwdriver 螺絲起子", base: "伏特加", flavors: ["甜", "果香"],
+            method: "杯中加冰，倒入伏特加與柳橙汁拌勻",
+            ingredients: [{ name: "伏特加", amount: 45, unit: "ml" }, { name: "柳橙汁", amount: 120, unit: "ml" }]
+        },
+        {
+            id: "black_russian", name: "Black Russian 黑俄羅斯", base: "伏特加", flavors: ["甜", "濃烈"],
+            method: "岩石杯加冰倒入伏特加與咖啡香利酒輕輕攪拌",
+            ingredients: [{ name: "伏特加", amount: 50, unit: "ml" }, { name: "咖啡香利酒", amount: 25, unit: "ml" }]
+        }
+    ];
+
+    // --- 狀態變數 ---
+    let selectedBase = null;
+    let selectedFlavors = [];
+    let selectedRecipeId = null;
+    let servings = 1;
+
+    // --- DOM 引用 ---
+    const baseTagsContainer = document.getElementById('base-tags');
+    const flavorTagsContainer = document.getElementById('flavor-tags');
+    const btnClear = document.getElementById('btn-clear');
+    const recipeListContainer = document.getElementById('recipe-list');
+    const resultCountEl = document.getElementById('result-count');
+
+    const emptyDetailsEl = document.getElementById('empty-details');
+    const activeDetailsEl = document.getElementById('active-details');
+    const detailNameEl = document.getElementById('detail-name');
+    const detailMethodEl = document.getElementById('detail-method');
+    const servingsInput = document.getElementById('servings-input');
+    const servingsTip = document.getElementById('servings-tip');
+    const btnMinus = document.getElementById('btn-minus');
+    const btnPlus = document.getElementById('btn-plus');
+    const ingredientsList = document.getElementById('ingredients-list');
+
+    // --- 初始化事件 ---
+    function initEvents() {
+        baseTagsContainer.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('btn-tag')) return;
+            const val = e.target.getAttribute('data-base');
+            selectedBase = (selectedBase === val) ? null : val;
+            updateFilterUI();
+            renderRecipeList();
+        });
+
+        flavorTagsContainer.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('btn-tag')) return;
+            const val = e.target.getAttribute('data-flavor');
+            const idx = selectedFlavors.indexOf(val);
+            if (idx > -1) selectedFlavors.splice(idx, 1);
+            else selectedFlavors.push(val);
+            updateFilterUI();
+            renderRecipeList();
+        });
+
+        btnClear.addEventListener('click', () => {
+            selectedBase = null;
+            selectedFlavors = [];
+            updateFilterUI();
+            renderRecipeList();
+        });
+
+        btnMinus.addEventListener('click', () => setServings(servings - 1));
+        btnPlus.addEventListener('click', () => setServings(servings + 1));
+        servingsInput.addEventListener('input', (e) => handleServingsInput(e.target.value));
+    }
+
+    function updateFilterUI() {
+        baseTagsContainer.querySelectorAll('.btn-tag').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-base') === selectedBase);
+        });
+        flavorTagsContainer.querySelectorAll('.btn-tag').forEach(btn => {
+            btn.classList.toggle('active', selectedFlavors.includes(btn.getAttribute('data-flavor')));
+        });
+    }
+
+    function getFilteredRecipes() {
+        return recipes.filter(r => {
+            if (selectedBase && r.base !== selectedBase) return false;
+            if (selectedFlavors.length > 0) {
+                if (!selectedFlavors.every(f => r.flavors.includes(f))) return false;
+            }
+            return true;
+        });
+    }
+
+    function renderRecipeList() {
+        const filtered = getFilteredRecipes();
+        resultCountEl.textContent = `找到 ${filtered.length} 款`;
+        recipeListContainer.innerHTML = '';
+
+        if (filtered.length === 0) {
+            recipeListContainer.innerHTML = '<div class="no-result">找不到符合的配方，請放寬條件</div>';
+            return;
+        }
+
+        filtered.forEach(r => {
+            const card = document.createElement('div');
+            card.className = `recipe-card ${r.id === selectedRecipeId ? 'active' : ''}`;
+            
+            const title = document.createElement('div');
+            title.className = 'recipe-card-title';
+            title.textContent = r.name;
+
+            const tagsContainer = document.createElement('div');
+            const baseBadge = document.createElement('span');
+            baseBadge.className = 'badge badge-base';
+            baseBadge.textContent = r.base;
+            tagsContainer.appendChild(baseBadge);
+
+            r.flavors.forEach(f => {
+                const flavorBadge = document.createElement('span');
+                flavorBadge.className = 'badge badge-flavor';
+                flavorBadge.textContent = f;
+                tagsContainer.appendChild(flavorBadge);
+            });
+
+            card.appendChild(title);
+            card.appendChild(tagsContainer);
+
+            card.addEventListener('click', () => selectRecipe(r.id));
+            recipeListContainer.appendChild(card);
+        });
+    }
+
+    function selectRecipe(id) {
+        selectedRecipeId = id;
+        renderRecipeList();
+        renderRecipeDetails();
+    }
+
+    function setServings(val) {
+        let parsed = parseInt(val, 10);
+        let showTip = false;
+
+        if (isNaN(parsed) || parsed < 1) { parsed = 1; showTip = true; }
+        else if (parsed > 50) { parsed = 50; showTip = true; }
+
+        servings = parsed;
+        servingsInput.value = servings;
+        servingsTip.style.display = showTip ? 'inline-block' : 'none';
+        renderIngredients();
+    }
+
+    function handleServingsInput(val) {
+        if (val === '') {
+            servingsTip.style.display = 'inline-block';
+            return;
+        }
+        let parsed = parseInt(val, 10);
+        let showTip = false;
+
+        if (isNaN(parsed) || parsed < 1) { parsed = 1; showTip = true; }
+        else if (parsed > 50) { parsed = 50; showTip = true; }
+
+        servings = parsed;
+        servingsInput.value = parsed;
+        servingsTip.style.display = showTip ? 'inline-block' : 'none';
+        renderIngredients();
+    }
+
+    function renderRecipeDetails() {
+        const recipe = recipes.find(r => r.id === selectedRecipeId);
+        if (!recipe) {
+            emptyDetailsEl.style.display = 'block';
+            activeDetailsEl.style.display = 'none';
+            return;
+        }
+
+        emptyDetailsEl.style.display = 'none';
+        activeDetailsEl.style.display = 'block';
+
+        detailNameEl.textContent = recipe.name;
+        detailMethodEl.textContent = `作法：${recipe.method}`;
+        renderIngredients();
+    }
+
+    function renderIngredients() {
+        const recipe = recipes.find(r => r.id === selectedRecipeId);
+        if (!recipe) return;
+
+        ingredientsList.innerHTML = '';
+        recipe.ingredients.forEach(ing => {
+            const li = document.createElement('li');
+            li.className = 'ingredient-item';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = ing.name;
+
+            const amountSpan = document.createElement('span');
+            amountSpan.style.color = 'var(--accent-color)';
+            amountSpan.style.fontWeight = 'bold';
+            amountSpan.textContent = `${ing.amount * servings} ${ing.unit}`;
+
+            li.appendChild(nameSpan);
+            li.appendChild(amountSpan);
+            ingredientsList.appendChild(li);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initEvents();
+        updateFilterUI();
+        renderRecipeList();
+    });
+</script>
+</body>
+</html>
